@@ -1,0 +1,185 @@
+__int64 __fastcall RtlpProcessReflectionStartup(PVOID Buffer)
+{
+  int ntstatus_syscall; // r14d
+  _OWORD *BaseAddress_loc; // rax
+  int ProcessFlags; // ecx
+  int ntstatus_cloned; // eax
+  HANDLE ProcessHandle; // r8
+  HANDLE handle_event_loc; // rdx
+  int ntstatus_syscall_loc; // eax
+  __int64 ProcessHandle_loc; // rcx
+  __int64 SourceHandle_unknown; // rdx
+  void *unknown; // r15
+  HANDLE ProcessHandle_1; // rbx
+  HANDLE ThreadHandle; // rdi
+  __int64 EventHandle_1; // rcx
+  void *Handle_1; // rsi
+  void (__fastcall *unknown_2)(_QWORD); // rax
+  __int64 unknown_1; // rcx
+  int InitialState; // [rsp+20h] [rbp-89h]
+  SIZE_T RegionSize[2]; // [rsp+40h] [rbp-69h] BYREF
+  struct _RTL_USER_PROCESS_INFORMATION OutProcessInformation; // [rsp+50h] [rbp-59h] BYREF
+  PVOID BaseAddress; // [rsp+110h] [rbp+67h] BYREF
+  HANDLE EventHandle; // [rsp+118h] [rbp+6Fh] BYREF
+  HANDLE handle_Waiting_unknown; // [rsp+120h] [rbp+77h] BYREF
+  HANDLE Handle; // [rsp+128h] [rbp+7Fh] BYREF
+
+  Handle = 0;
+  BaseAddress = 0;
+  handle_Waiting_unknown = 0;
+  EventHandle = 0;
+  ntstatus_syscall = ZwAllocateVirtualMemory(-1, &BaseAddress, 0, Buffer, 12288, 4);// size of 88
+                                                // Since   :
+                                                //  RegionSize = 88;
+                                                //   status_allocate = ZwAllocateVirtualMemory(-1, &BaseAddress, 0, &RegionSize, 12288, 4);
+                                                //   if ( status_allocate < 0 )
+                                                //   {
+                                                //     BaseAddress = 0;
+                                                //     goto LABEL_41;
+                                                //   }
+                                                //   BaseAddress_loc = BaseAddress;
+                                                //   RegionSize_Loc = RegionSize;
+                                                //   *((_QWORD *)BaseAddress + 3) = StartContext;
+                                                //   *((_QWORD *)BaseAddress_loc + 2) = StartRoutine;
+                                                //   *(_QWORD *)BaseAddress_loc = RegionSize_Loc;
+                                                //   *((_DWORD *)BaseAddress_loc + 2) = Flags;
+                                                //   *((_QWORD *)BaseAddress_loc + 6) = EventHandle;
+                                                //   if ( ProcessHandle == (HANDLE)-1LL )
+                                                //   {
+                                                //     *((_DWORD *)BaseAddress_loc + 2) = Flags | 0x10;
+                                                //     status_allocate = RtlpProcessReflectionStartup(BaseAddress);
+  if ( ntstatus_syscall < 0 )
+  {
+    *(_OWORD *)((char *)Buffer + 56) = 0;
+    *(_OWORD *)((char *)Buffer + 72) = 0;
+    goto LABEL_28;
+  }
+  BaseAddress_loc = BaseAddress;
+  *(_OWORD *)BaseAddress = *(_OWORD *)Buffer;
+  BaseAddress_loc[1] = *((_OWORD *)Buffer + 1);
+  BaseAddress_loc[2] = *((_OWORD *)Buffer + 2);
+  BaseAddress_loc[3] = *((_OWORD *)Buffer + 3);
+  BaseAddress_loc[4] = *((_OWORD *)Buffer + 4);
+  *((_QWORD *)BaseAddress_loc + 10) = *((_QWORD *)Buffer + 10);
+  LOBYTE(InitialState) = 0;
+  ntstatus_syscall = ZwCreateEvent(&Handle, 2031619, 0, 0, InitialState);
+  if ( ntstatus_syscall >= 0 )
+  {
+    ProcessFlags = *((_DWORD *)Buffer + 2) & 2 | 4;
+    if ( (*((_DWORD *)Buffer + 2) & 8) == 0 )
+      ProcessFlags = *((_DWORD *)Buffer + 2) & 2;
+    ntstatus_cloned = RtlCloneUserProcess(ProcessFlags | 1u, 0, 0, 0, &OutProcessInformation);
+    ntstatus_syscall = ntstatus_cloned;
+    if ( ntstatus_cloned )
+    {
+      if ( ntstatus_cloned == 0x129 )
+      {
+        NtCurrentPeb()->Ldr->ShutdownInProgress = 1;
+        ZwSetEvent(EventHandle, 0);
+        NtClose(EventHandle);
+        if ( handle_Waiting_unknown )
+        {
+          NtWaitForSingleObject(handle_Waiting_unknown, 0, 0);
+          NtClose(handle_Waiting_unknown);
+        }
+        unknown_2 = (void (__fastcall *)(_QWORD))*((_QWORD *)BaseAddress + 2);
+        if ( unknown_2 )
+        {
+          unknown_2(*((_QWORD *)BaseAddress + 3));
+        }
+        else if ( (*((_DWORD *)BaseAddress + 2) & 4) == 0 )
+        {
+          NtSuspendThread((HANDLE)0xFFFFFFFFFFFFFFFELL, 0);
+        }
+        RegionSize[0] = *(_QWORD *)BaseAddress;
+        ntstatus_syscall_loc = ZwFreeVirtualMemory(-1, &BaseAddress, RegionSize, 0x8000);
+        ntstatus_syscall = ntstatus_syscall_loc;
+        ProcessHandle_loc = -1;
+        goto LABEL_8;
+      }
+      *((_QWORD *)Buffer + 7) = 0;
+      *((_QWORD *)Buffer + 8) = 0;
+      *((_QWORD *)Buffer + 9) = 0;
+      *((_QWORD *)Buffer + 10) = 0;
+      unknown_1 = *((_QWORD *)Buffer + 4);
+      if ( unknown_1 )
+        ZwSetEvent(unknown_1, 0);
+    }
+    else
+    {
+      ProcessHandle = OutProcessInformation.ProcessHandle;
+      handle_event_loc = Handle;
+      *((_QWORD *)Buffer + 8) = OutProcessInformation.ThreadHandle;
+      *(CLIENT_ID *)((char *)Buffer + 72) = OutProcessInformation.ClientId;
+      *((_QWORD *)Buffer + 7) = ProcessHandle;
+      ntstatus_syscall_loc = ZwDuplicateObject(-1, handle_event_loc, ProcessHandle, &EventHandle, 2031619, 0, 2);
+      ProcessHandle_loc = (__int64)OutProcessInformation.ProcessHandle;
+      ntstatus_syscall = ntstatus_syscall_loc;
+      if ( ntstatus_syscall_loc < 0 )
+      {
+LABEL_8:
+        ZwTerminateProcess(ProcessHandle_loc, (unsigned int)ntstatus_syscall_loc);
+        goto LABEL_28;
+      }
+      ntstatus_syscall_loc = NtWriteVirtualMemory(OutProcessInformation.ProcessHandle, &EventHandle, &EventHandle, 8, 0);
+      ntstatus_syscall = ntstatus_syscall_loc;
+      if ( ntstatus_syscall_loc < 0 )
+        goto LABEL_10;
+      SourceHandle_unknown = *((_QWORD *)Buffer + 6);
+      if ( SourceHandle_unknown )
+      {
+        ntstatus_syscall_loc = ZwDuplicateObject(
+                                 -1,
+                                 SourceHandle_unknown,
+                                 OutProcessInformation.ProcessHandle,
+                                 &handle_Waiting_unknown,
+                                 2031619,
+                                 0,
+                                 2);
+        ntstatus_syscall = ntstatus_syscall_loc;
+        if ( ntstatus_syscall_loc < 0 )
+          goto LABEL_10;
+        if ( (*((_DWORD *)Buffer + 2) & 0x10) == 0 )
+          NtClose(*((HANDLE *)Buffer + 6));
+        ntstatus_syscall_loc = NtWriteVirtualMemory(
+                                 OutProcessInformation.ProcessHandle,
+                                 &handle_Waiting_unknown,
+                                 &handle_Waiting_unknown,
+                                 8,
+                                 0);
+        ntstatus_syscall = ntstatus_syscall_loc;
+        if ( ntstatus_syscall_loc < 0 )
+        {
+LABEL_10:
+          ProcessHandle_loc = (__int64)OutProcessInformation.ProcessHandle;
+          goto LABEL_8;
+        }
+      }
+      ZwResumeProcess(OutProcessInformation.ProcessHandle);
+      NtWaitForSingleObject(Handle, 0, 0);
+      unknown = (void *)*((_QWORD *)Buffer + 4);
+      if ( unknown )
+      {
+        ProcessHandle_1 = OutProcessInformation.ProcessHandle;
+        ThreadHandle = OutProcessInformation.ThreadHandle;
+        EventHandle_1 = *((_QWORD *)Buffer + 4);
+        Handle_1 = (void *)*((_QWORD *)Buffer + 5);
+        ntstatus_syscall = ZwSetEvent(EventHandle_1, 0);
+        NtWaitForSingleObject(Handle_1, 0, 0);
+        NtClose(ProcessHandle_1);
+        NtClose(ThreadHandle);
+        NtClose(unknown);
+        NtClose(Handle_1);
+      }
+    }
+  }
+LABEL_28:
+  if ( Handle )
+    NtClose(Handle);
+  if ( BaseAddress )
+  {
+    RegionSize[0] = *(_QWORD *)BaseAddress;
+    ZwFreeVirtualMemory(-1, &BaseAddress, RegionSize, 0x8000);
+  }
+  return (unsigned int)ntstatus_syscall;
+}

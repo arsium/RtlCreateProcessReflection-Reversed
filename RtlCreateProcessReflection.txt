@@ -1,0 +1,243 @@
+__int64 __fastcall RtlCreateProcessReflection(
+        HANDLE ProcessHandle,
+        ULONG Flags,
+        PVOID StartRoutine,
+        PVOID StartContext,
+        HANDLE EventHandle,
+        PPROCESS_REFLECTION_INFORMATION ReflectionInformation)
+{
+  int status_allocate; // ebx
+  PVOID BaseAddress_loc; // rcx
+  SIZE_T RegionSize_Loc; // rax
+  PVOID base_address_buffer; // rax
+  _OWORD *BaseAddress_loc2; // rax
+  _OWORD *BaseAddress_MapView_loc; // rcx
+  HANDLE EventHandle_3; // rcx
+  int status_dup; // eax
+  int InitialState; // [rsp+28h] [rbp-99h]
+  int InitialState_2; // [rsp+28h] [rbp-99h]
+  PVOID StartAddress; // [rsp+38h] [rbp-89h]
+  PVOID BaseAddress; // [rsp+68h] [rbp-59h] BYREF
+  PVOID BaseAddress_MapView; // [rsp+70h] [rbp-51h] BYREF
+  SIZE_T RegionSize; // [rsp+78h] [rbp-49h] BYREF
+  HANDLE SourceHandle; // [rsp+80h] [rbp-41h] BYREF
+  ULONG ProcessInformationLength[2]; // [rsp+88h] [rbp-39h] BYREF
+  _UNICODE_STRING *ProcessInformation_ImageName; // [rsp+90h] [rbp-31h] BYREF
+  PVOID BaseAddress_MapView_2; // [rsp+98h] [rbp-29h] BYREF
+  HANDLE SectionHandle; // [rsp+A0h] [rbp-21h] BYREF
+  HANDLE EventHandle_1; // [rsp+A8h] [rbp-19h] BYREF
+  struct _CLIENT_ID Handle; // [rsp+B0h] [rbp-11h] BYREF
+  SIZE_T MaximumSize; // [rsp+C0h] [rbp-1h] BYREF
+  HANDLE ArrayHandle[2]; // [rsp+C8h] [rbp+7h] BYREF
+  LARGE_INTEGER SystemTime; // [rsp+D8h] [rbp+17h] BYREF
+  LARGE_INTEGER SystemTime2; // [rsp+E0h] [rbp+1Fh] BYREF
+
+  *(_QWORD *)ProcessInformationLength = 4096;
+  Handle.UniqueProcess = 0;
+  BaseAddress_MapView = 0;
+  ProcessInformation_ImageName = 0;
+  BaseAddress = 0;
+  SectionHandle = 0;
+  MaximumSize = 0;
+  Handle.UniqueThread = 0;
+  BaseAddress_MapView_2 = 0;
+  EventHandle_1 = 0;
+  SourceHandle = 0;
+  ZwQuerySystemTime(&SystemTime);
+  if ( (Flags & 0xFFFFFFE1) != 0 )
+    return 3221225712LL;
+  if ( (Flags & 8) != 0 && StartRoutine )
+    return 3221225715LL;
+  if ( ReflectionInformation )
+  {
+    *(_OWORD *)&ReflectionInformation->ReflectionProcessHandle = 0;
+    ReflectionInformation->ReflectionClientId = 0;
+  }
+  status_allocate = ZwAllocateVirtualMemory(-1, &ProcessInformation_ImageName, 0, ProcessInformationLength, 12288, 4);
+  if ( status_allocate < 0 )
+  {
+    ProcessInformation_ImageName = 0;
+    goto LABEL_41;
+  }
+  NtQueryInformationProcess(
+    (HANDLE)0xFFFFFFFFFFFFFFFFLL,
+    ProcessImageFileName,
+    ProcessInformation_ImageName,
+    ProcessInformationLength[0],
+    ProcessInformationLength);
+  *(_QWORD *)ProcessInformationLength = 4096;
+  ZwFreeVirtualMemory(-1, &ProcessInformation_ImageName, ProcessInformationLength, 0x8000);
+  RegionSize = 88;
+  status_allocate = ZwAllocateVirtualMemory(-1, &BaseAddress, 0, &RegionSize, 12288, 4);
+  if ( status_allocate < 0 )
+  {
+    BaseAddress = 0;
+    goto LABEL_41;
+  }
+  BaseAddress_loc = BaseAddress;
+  RegionSize_Loc = RegionSize;
+  *((_QWORD *)BaseAddress + 3) = StartContext;
+  *((_QWORD *)BaseAddress_loc + 2) = StartRoutine;
+  *(_QWORD *)BaseAddress_loc = RegionSize_Loc;
+  *((_DWORD *)BaseAddress_loc + 2) = Flags;
+  *((_QWORD *)BaseAddress_loc + 6) = EventHandle;
+  if ( ProcessHandle == (HANDLE)-1LL )
+  {
+    *((_DWORD *)BaseAddress_loc + 2) = Flags | 0x10;
+    status_allocate = RtlpProcessReflectionStartup(BaseAddress);
+    if ( status_allocate >= 0 && ReflectionInformation )
+    {
+      ReflectionInformation->ReflectionProcessHandle = (HANDLE)*((_QWORD *)BaseAddress + 7);
+      ReflectionInformation->ReflectionThreadHandle = (HANDLE)*((_QWORD *)BaseAddress + 8);
+      ReflectionInformation->ReflectionClientId.UniqueProcess = (HANDLE)*((_QWORD *)BaseAddress + 9);
+      base_address_buffer = BaseAddress;
+LABEL_40:
+      ReflectionInformation->ReflectionClientId.UniqueThread = (HANDLE)*((_QWORD *)base_address_buffer + 10);
+      goto LABEL_41;
+    }
+    goto LABEL_41;
+  }
+  MaximumSize = RegionSize;
+  status_allocate = NtCreateSection(&SectionHandle, 6, 0, &MaximumSize, 4, 0x8000000, 0);
+  if ( status_allocate < 0 )
+    goto LABEL_41;
+  Handle.UniqueThread = (HANDLE)RegionSize;
+  status_allocate = ZwMapViewOfSection(
+                      SectionHandle,
+                      ProcessHandle,
+                      &BaseAddress_MapView_2,
+                      0,
+                      RegionSize,
+                      0,
+                      &Handle.UniqueThread,
+                      2,
+                      0,
+                      4);
+  if ( status_allocate >= 0 )
+  {
+    status_allocate = ZwMapViewOfSection(
+                        SectionHandle,
+                        -1,
+                        &BaseAddress_MapView,
+                        0,
+                        RegionSize,
+                        0,
+                        &Handle.UniqueThread,
+                        2,
+                        0,
+                        4);
+    if ( status_allocate < 0 )
+    {
+      BaseAddress_MapView = 0;
+      goto LABEL_41;
+    }
+    if ( !ReflectionInformation
+      || (LOBYTE(InitialState) = 0,
+          status_allocate = ZwCreateEvent(&EventHandle_1, 2031619, 0, 0, InitialState),
+          status_allocate >= 0)
+      && (LOBYTE(InitialState_2) = 0,
+          status_allocate = ZwCreateEvent(&SourceHandle, 2031619, 0, 0, InitialState_2),
+          status_allocate >= 0)
+      && (status_allocate = ZwDuplicateObject(-1, EventHandle_1, ProcessHandle, (char *)BaseAddress + 32, 2031619, 0, 2),
+          status_allocate >= 0)
+      && (status_allocate = ZwDuplicateObject(-1, SourceHandle, ProcessHandle, (char *)BaseAddress + 40, 2031619, 0, 2),
+          status_allocate >= 0)
+      && (!EventHandle
+       || (status_allocate = ZwDuplicateObject(-1, EventHandle, ProcessHandle, (char *)BaseAddress + 48, 2031619, 0, 2),
+           status_allocate >= 0)) )
+    {
+      BaseAddress_loc2 = BaseAddress;
+      BaseAddress_MapView_loc = BaseAddress_MapView;
+      *(_OWORD *)BaseAddress_MapView = *(_OWORD *)BaseAddress;
+      BaseAddress_MapView_loc[1] = BaseAddress_loc2[1];
+      BaseAddress_MapView_loc[2] = BaseAddress_loc2[2];
+      BaseAddress_MapView_loc[3] = BaseAddress_loc2[3];
+      BaseAddress_MapView_loc[4] = BaseAddress_loc2[4];
+      *((_QWORD *)BaseAddress_MapView_loc + 10) = *((_QWORD *)BaseAddress_loc2 + 10);
+      status_allocate = RtlpCreateUserThreadEx(
+                          ProcessHandle,
+                          0,
+                          2u,
+                          0,
+                          0,
+                          0,
+                          StartAddress,
+                          RtlpProcessReflectionStartup,
+                          (PHANDLE)BaseAddress_MapView_2,
+                          &Handle);
+      if ( status_allocate >= 0 )
+      {
+        if ( ReflectionInformation )
+        {
+          ArrayHandle[0] = Handle.UniqueProcess;
+          ArrayHandle[1] = EventHandle_1;
+          if ( ((NTSTATUS (__fastcall *)(ULONG, HANDLE[], WAIT_TYPE, BOOLEAN, PLARGE_INTEGER))NtWaitForMultipleObjects)(
+                 2u,
+                 ArrayHandle,
+                 WaitAny,
+                 0,
+                 0) == 1 )
+          {
+            if ( *((_QWORD *)BaseAddress_MapView + 7) )
+            {
+              if ( (int)ZwDuplicateObject(
+                          ProcessHandle,
+                          *((_QWORD *)BaseAddress_MapView + 7),
+                          -1,
+                          ReflectionInformation,
+                          0x1FFFFF,
+                          0,
+                          2) >= 0 )
+              {
+                status_dup = ZwDuplicateObject(
+                               ProcessHandle,
+                               *((_QWORD *)BaseAddress_MapView + 8),
+                               -1,
+                               &ReflectionInformation->ReflectionThreadHandle,
+                               0x1FFFFF,
+                               0,
+                               2);
+                EventHandle_3 = SourceHandle;
+                if ( status_dup >= 0 )
+                {
+                  status_allocate = ZwSetEvent(SourceHandle, 0);
+                  ReflectionInformation->ReflectionClientId.UniqueProcess = (HANDLE)*((_QWORD *)BaseAddress_MapView + 9);
+                  base_address_buffer = BaseAddress_MapView;
+                  goto LABEL_40;
+                }
+              }
+              else
+              {
+                EventHandle_3 = SourceHandle;
+              }
+              status_allocate = ZwSetEvent(EventHandle_3, 0);
+              goto LABEL_41;
+            }
+            NtWaitForSingleObject(Handle.UniqueProcess, 0, 0);
+          }
+          status_allocate = -1073741823;
+        }
+      }
+    }
+LABEL_41:
+    if ( BaseAddress_MapView_2 )
+      NtUnmapViewOfSection(ProcessHandle, BaseAddress_MapView_2);
+    goto LABEL_43;
+  }
+  BaseAddress_MapView_2 = 0;
+LABEL_43:
+  if ( BaseAddress_MapView )
+    NtUnmapViewOfSection(-1, BaseAddress_MapView);
+  if ( SectionHandle )
+    NtClose(SectionHandle);
+  if ( BaseAddress )
+    ZwFreeVirtualMemory(-1, &BaseAddress, &RegionSize, 0x8000);
+  if ( EventHandle_1 )
+    NtClose(EventHandle_1);
+  if ( SourceHandle )
+    NtClose(SourceHandle);
+  if ( Handle.UniqueProcess )
+    NtClose(Handle.UniqueProcess);
+  ZwQuerySystemTime(&SystemTime2);
+  return (unsigned int)status_allocate;
+}

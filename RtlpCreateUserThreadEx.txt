@@ -1,0 +1,80 @@
+// local variable allocation has failed, the output may be wrong!
+__int64 __fastcall RtlpCreateUserThreadEx(
+        HANDLE ProcessHandle,
+        PSECURITY_DESCRIPTOR ThreadSecurityDescriptor,
+        BOOLEAN CreateSuspended,
+        ULONG ZeroBits,
+        SIZE_T MaximumStackSize,
+        SIZE_T CommittedStackSize,
+        PVOID StartAdd,
+        PVOID Parameter,
+        PHANDLE ThreadHandle,
+        PCLIENT_ID ClientId)
+{
+  SIZE_T ZeroBits_1; // rsi
+  int v13; // edx
+  int v14; // ecx
+  int v15; // edx
+  ULONG create_flags_tmp; // r8d
+  ULONG CreateFlags; // ecx
+  __int64 result; // rax
+  HANDLE Handle; // [rsp+60h] [rbp-A0h] BYREF
+  ULONG_PTR v21; // [rsp+68h] [rbp-98h] OVERLAPPED BYREF
+  OBJECT_ATTRIBUTES ObjectAttributes; // [rsp+78h] [rbp-88h] BYREF
+  PS_ATTRIBUTE_LIST AttributeList; // [rsp+B0h] [rbp-50h] BYREF
+  PVOID v24; // [rsp+190h] [rbp+90h]
+
+  ZeroBits_1 = ZeroBits;
+  *(_OWORD *)&v21 = 0;
+  if ( (CreateSuspended & 0xFFFFFF88) != 0 )
+    return 3221225485LL;
+  ObjectAttributes.Length = 48;
+  ObjectAttributes.Attributes = 512;
+  ObjectAttributes.SecurityDescriptor = ThreadSecurityDescriptor;
+  AttributeList.Attributes[0].Attribute = 65539;
+  v13 = CreateSuspended & 1 | 2;
+  AttributeList.Attributes[0].Size = 16;
+  AttributeList.TotalLength = 40;
+  if ( (CreateSuspended & 2) == 0 )
+    v13 = CreateSuspended & 1;
+  v14 = v13 | 4;
+  if ( (CreateSuspended & 4) == 0 )
+    v14 = v13;
+  v15 = v14 | 0x10;
+  if ( (CreateSuspended & 0x10) == 0 )
+    v15 = v14;
+  create_flags_tmp = v15 | 0x20;
+  if ( (CreateSuspended & 0x20) == 0 )
+    create_flags_tmp = v15;
+  AttributeList.Attributes[0].Value = (ULONG_PTR)&v21;
+  ObjectAttributes.RootDirectory = 0;
+  ObjectAttributes.ObjectName = 0;
+  ObjectAttributes.SecurityQualityOfService = 0;
+  CreateFlags = create_flags_tmp | 0x40;
+  AttributeList.Attributes[0].ReturnLength = 0;
+  if ( (CreateSuspended & 0x40) == 0 )
+    CreateFlags = create_flags_tmp;
+  result = NtCreateThreadEx(
+             &Handle,
+             0x1FFFFF,
+             &ObjectAttributes,
+             ProcessHandle,
+             Parameter,
+             ThreadHandle,
+             CreateFlags,
+             ZeroBits_1,
+             CommittedStackSize,
+             MaximumStackSize,
+             &AttributeList);
+  if ( (int)result >= 0 )
+  {
+    if ( ClientId )
+      ClientId->UniqueProcess = Handle;
+    else
+      NtClose(Handle);
+    if ( v24 )
+      *(_OWORD *)v24 = *(_OWORD *)&v21;
+    return 0;
+  }
+  return result;
+}

@@ -1,0 +1,181 @@
+__int64 __fastcall RtlpCreateUserProcess(
+        PCUNICODE_STRING NtImagePathName,
+        PRTL_USER_PROCESS_PARAMETERS ProcessParameters,
+        ULONG ProcessFlags,
+        ULONG ThreadFlags,
+        PRTL_USER_PROCESS_EXTENDED_PARAMETERS ProcessExtendedParameters,
+        PRTL_USER_PROCESS_INFORMATION ProcessInformation)
+{
+  unsigned int index; // ecx
+  HANDLE ParentProcess; // rdx
+  HANDLE DebugPort; // rdx
+  HANDLE TokenHandle; // rdx
+  USHORT NodeNumber; // ax
+  __int64 protection_level_index; // rax
+  signed int Flags; // eax
+  __int64 node_preferred_index; // rax
+  __int64 current_parent_process_index; // rax
+  __int64 current_debug_port_index; // rax
+  __int64 current_token_handle_index; // rax
+  __int64 current_job_handle_index; // rax
+  __int64 secure_process_index; // rax
+  __int16 node_preferred; // [rsp+60h] [rbp-A0h] BYREF
+  unsigned int v25; // [rsp+68h] [rbp-98h] BYREF
+  PPS_TRUSTLET_CREATE_ATTRIBUTES PsAttributeSecureProcess; // [rsp+70h] [rbp-90h] BYREF
+  OBJECT_ATTRIBUTES ThreadObjectAttributes; // [rsp+78h] [rbp-88h] BYREF
+  OBJECT_ATTRIBUTES *ProcessObjectAttributes; // [rsp+A8h] [rbp-58h] BYREF
+  __int64 v29; // [rsp+B0h] [rbp-50h]
+  __int64 v30; // [rsp+B8h] [rbp-48h]
+  int v31; // [rsp+C0h] [rbp-40h]
+  PSECURITY_DESCRIPTOR ProcessSecurityDescriptor; // [rsp+C8h] [rbp-38h]
+  __int64 v33; // [rsp+D0h] [rbp-30h]
+  struct _PS_CREATE_INFO CreateInfo; // [rsp+E0h] [rbp-20h] BYREF
+  struct _PS_ATTRIBUTE_LIST AttributeList; // [rsp+140h] [rbp+40h] BYREF
+  __int64 v36; // [rsp+168h] [rbp+68h]
+  __int64 v37; // [rsp+170h] [rbp+70h]
+  SECTION_IMAGE_INFORMATION *p_ImageInformation; // [rsp+178h] [rbp+78h]
+  __int64 v39; // [rsp+180h] [rbp+80h]
+  __int64 v40; // [rsp+188h] [rbp+88h]
+  __int64 Length; // [rsp+190h] [rbp+90h]
+  wchar_t *Buffer; // [rsp+198h] [rbp+98h]
+  __int64 v43; // [rsp+1A0h] [rbp+A0h]
+  __int64 v44; // [rsp+1A8h] [rbp+A8h]
+  __int64 v45; // [rsp+1B0h] [rbp+B0h]
+  unsigned int *v46; // [rsp+1B8h] [rbp+B8h]
+  __int64 v47; // [rsp+1C0h] [rbp+C0h]
+
+  memset(&ProcessInformation->Length + 1, 0, 0x64u);
+  ProcessInformation->Length = 104;
+  if ( ProcessExtendedParameters && ProcessExtendedParameters->Version != 1 )
+    return 3221225485LL;
+  v29 = 0;
+  LODWORD(ProcessObjectAttributes) = 48;
+  v31 = 512;
+  v30 = 0;
+  if ( ProcessExtendedParameters )
+    ProcessSecurityDescriptor = ProcessExtendedParameters->ProcessSecurityDescriptor;
+  else
+    ProcessSecurityDescriptor = 0;
+  v33 = 0;
+  ThreadObjectAttributes.Length = 48;
+  ThreadObjectAttributes.RootDirectory = 0;
+  ThreadObjectAttributes.Attributes = 512;
+  ThreadObjectAttributes.ObjectName = 0;
+  if ( ProcessExtendedParameters )
+    ThreadObjectAttributes.SecurityDescriptor = ProcessExtendedParameters->ThreadSecurityDescriptor;
+  else
+    ThreadObjectAttributes.SecurityDescriptor = 0;
+  ThreadObjectAttributes.SecurityQualityOfService = 0;
+  PsAttributeSecureProcess = 0;
+  memset(&CreateInfo.State, 0, 0x50u);
+  *(_BYTE *)&CreateInfo.InitState.1 |= 4u;
+  AttributeList.Attributes[0].Value = (ULONG_PTR)&ProcessInformation->ClientId;
+  CreateInfo.Size = 88;
+  p_ImageInformation = &ProcessInformation->ImageInformation;
+  index = 2;
+  AttributeList.Attributes[0].Attribute = 65539;
+  AttributeList.Attributes[0].Size = 16;
+  AttributeList.Attributes[0].ReturnLength = 0;
+  v36 = 6;
+  v37 = 64;
+  v39 = 0;
+  if ( NtImagePathName )
+  {
+    index = 4;
+    Length = NtImagePathName->Length;
+    Buffer = NtImagePathName->Buffer;
+    v40 = 131077;
+    v43 = 0;
+    v25 = v25 & 0xFFFFFFE0 | 2;
+    v46 = &v25;
+    v44 = 131082;
+    v45 = 8;
+    v47 = 0;
+  }
+  if ( ProcessExtendedParameters )
+  {
+    ParentProcess = ProcessExtendedParameters->ParentProcess;
+    if ( ParentProcess )
+    {
+      current_parent_process_index = index++;
+      AttributeList.Attributes[current_parent_process_index].Attribute = 393216;// PS_ATTRIBUTE_PARENT_PROCESS
+      AttributeList.Attributes[current_parent_process_index].Size = 8;
+      AttributeList.Attributes[current_parent_process_index].ReturnLength = 0;
+      *(ULONG_PTR *)((char *)&AttributeList.Attributes[0].Value + current_parent_process_index * 32) = (ULONG_PTR)ParentProcess;
+    }
+    DebugPort = ProcessExtendedParameters->DebugPort;
+    if ( DebugPort )
+    {
+      current_debug_port_index = index++;
+      AttributeList.Attributes[current_debug_port_index].Attribute = 393217;// PS_ATTRIBUTE_DEBUG_OBJECT
+      AttributeList.Attributes[current_debug_port_index].Size = 8;
+      AttributeList.Attributes[current_debug_port_index].ReturnLength = 0;
+      *(ULONG_PTR *)((char *)&AttributeList.Attributes[0].Value + current_debug_port_index * 32) = (ULONG_PTR)DebugPort;
+    }
+    TokenHandle = ProcessExtendedParameters->TokenHandle;
+    if ( TokenHandle )
+    {
+      current_token_handle_index = index++;
+      AttributeList.Attributes[current_token_handle_index].Attribute = 393218;// PS_ATTRIBUTE_TOKEN
+      AttributeList.Attributes[current_token_handle_index].Size = 8;
+      AttributeList.Attributes[current_token_handle_index].ReturnLength = 0;
+      *(ULONG_PTR *)((char *)&AttributeList.Attributes[0].Value + current_token_handle_index * 32) = (ULONG_PTR)TokenHandle;
+    }
+    if ( ProcessExtendedParameters->JobHandle )
+    {
+      current_job_handle_index = index++;
+      AttributeList.Attributes[current_job_handle_index].Attribute = 131091;// PS_ATTRIBUTE_JOB_LIST
+      AttributeList.Attributes[current_job_handle_index].Size = 8;
+      AttributeList.Attributes[current_job_handle_index].ReturnLength = 0;
+      *(ULONG_PTR *)((char *)&AttributeList.Attributes[0].Value + current_job_handle_index * 32) = (ULONG_PTR)&ProcessExtendedParameters->JobHandle;
+    }
+    NodeNumber = ProcessExtendedParameters->NodeNumber;
+    if ( NodeNumber )
+    {
+      node_preferred = NodeNumber - 1;
+      node_preferred_index = index++;
+      AttributeList.Attributes[node_preferred_index].Attribute = 131085;// PS_ATTRIBUTE_PREFERRED_NODE
+      AttributeList.Attributes[node_preferred_index].Size = 2;
+      AttributeList.Attributes[node_preferred_index].ReturnLength = 0;
+      *(ULONG_PTR *)((char *)&AttributeList.Attributes[0].Value + node_preferred_index * 32) = (ULONG_PTR)&node_preferred;
+    }
+    else
+    {
+      ProcessFlags |= 0x100u;
+    }
+  }
+  if ( (ProcessFlags & 0x40) != 0 )
+  {
+    protection_level_index = index++;
+    AttributeList.Attributes[protection_level_index].Attribute = 393233;// PS_ATTRIBUTE_PROTECTION_LEVEL
+    AttributeList.Attributes[protection_level_index].Size = 1;
+    AttributeList.Attributes[protection_level_index].ReturnLength = 0;
+    *(ULONG_PTR *)((char *)&AttributeList.Attributes[0].Value + protection_level_index * 32) = 97;
+  }
+  if ( ProcessParameters )
+  {
+    Flags = ProcessParameters->Flags;
+    if ( Flags < 0 )
+    {
+      ProcessParameters->Flags = Flags & 0x7FFFFFFF;
+      secure_process_index = index++;
+      AttributeList.Attributes[secure_process_index].Attribute = 131090;// PS_ATTRIBUTE_SECURE_PROCESS
+      AttributeList.Attributes[secure_process_index].Size = 8;
+      AttributeList.Attributes[secure_process_index].ReturnLength = 0;
+      *(ULONG_PTR *)((char *)&AttributeList.Attributes[0].Value + secure_process_index * 32) = (ULONG_PTR)&PsAttributeSecureProcess;
+    }
+  }
+  AttributeList.TotalLength = 32LL * index + 8;
+  return NtCreateUserProcess(
+           &ProcessInformation->ProcessHandle,
+           &ProcessInformation->ThreadHandle,
+           0x2000000u,
+           0x2000000u,
+           (PCOBJECT_ATTRIBUTES)&ProcessObjectAttributes,
+           &ThreadObjectAttributes,
+           ProcessFlags,
+           ThreadFlags,
+           ProcessParameters,
+           &CreateInfo,
+           &AttributeList);
+}

@@ -1,0 +1,3 @@
+RtlCreateProcessReflection->[RtlpProcessReflectionStartup]->Return to RtlCreateProcessReflection->RtlpCreateUserThreadEx
+
+[RtlpProcessReflectionStartup->RtlCloneUserProcess->RtlpCreateUserProcess->NtCreateUserProcess]

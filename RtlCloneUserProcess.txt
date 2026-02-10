@@ -1,0 +1,111 @@
+__int64 __fastcall RtlCloneUserProcess(
+        ULONG ProcessFlags,
+        PSECURITY_DESCRIPTOR ProcessSecurityDescriptor,
+        PSECURITY_DESCRIPTOR ThreadSecurityDescriptor,
+        HANDLE DebugPort,
+        PRTL_USER_PROCESS_INFORMATION OutProcessInformation)
+{
+  int LockState; // esi
+  ULONG process_flags_loc; // r14d
+  ULONG process_flags_loc_2; // ebp
+  ULONG process_flags; // edi
+  struct _RTLP_FLS_CONTEXT *fls_context; // rcx
+  int ntstatus; // ebx
+  struct _RTLP_FLS_CONTEXT *v15; // rcx
+  unsigned int ntstatus_proc_create; // eax
+  unsigned int ntstatus_1; // ebp
+  int ReleaseState; // ebx
+  struct _RTLP_FLS_CONTEXT *v19; // rcx
+  RTL_USER_PROCESS_EXTENDED_PARAMETERS ProcessExtendedParameters; // [rsp+30h] [rbp-68h] BYREF
+
+  if ( (ProcessFlags & 0xFFFFFFF8) != 0 )
+    return 3221225711LL;
+  LockState = 2;
+  process_flags_loc = ProcessFlags & 1;
+  process_flags_loc_2 = 2 * (ProcessFlags & 2);
+  process_flags = ProcessFlags & 4;
+  if ( (ProcessFlags & 4) == 0 )
+  {
+    if ( (NtCurrentTeb()->SameTebFlags & 0x1000) != 0 )
+      return (unsigned int)-1073741420;
+    LdrpDrainWorkQueue(0);
+    LdrpAcquireLoaderLock();
+    RtlEnterCriticalSection(&LdrpWorkQueueLock);
+    RtlpFlsClonePrepare(fls_context);
+    RtlEnterCriticalSection(&FastPebLock);
+    LdrpLockTlsDelayedReclaimTable();
+    RtlAcquireSRWLockExclusive(&RtlpProtectedPoliciesSRWLock);
+    LdrForkMrdata(0);
+    ntstatus = RtlLockHeapManagerForCloning();
+    if ( ntstatus >= 0 )
+    {
+      RtlAcquireSRWLockExclusive(&RtlCriticalSectionLock);
+      RtlAcquireSRWLockExclusive(&LdrpForkActiveLock);
+      ntstatus = 0;
+      LdrpForkInProgress = 1;
+    }
+    else
+    {
+      LdrForkMrdata(2);
+      RtlReleaseSRWLockExclusive(&RtlpProtectedPoliciesSRWLock);
+      LdrpUnlockTlsDelayedReclaimTable(0);
+      RtlLeaveCriticalSection(&FastPebLock);
+      RtlpFlsCloneComplete(v15, 0);
+      LdrpCompleteProcessCloning(0);
+    }
+    if ( ntstatus < 0 )
+      return (unsigned int)ntstatus;
+  }
+  ProcessExtendedParameters.JobHandle = 0;
+  *(_QWORD *)&ProcessExtendedParameters.Version = 1;
+  ProcessExtendedParameters.ParentProcess = 0;
+  ProcessExtendedParameters.TokenHandle = 0;
+  ProcessExtendedParameters.ProcessSecurityDescriptor = ProcessSecurityDescriptor;
+  ProcessExtendedParameters.ThreadSecurityDescriptor = ThreadSecurityDescriptor;
+  ProcessExtendedParameters.DebugPort = DebugPort;
+  ntstatus_proc_create = RtlpCreateUserProcess(
+                           0,
+                           0,
+                           process_flags_loc_2,
+                           process_flags_loc,
+                           &ProcessExtendedParameters,
+                           OutProcessInformation);
+  ntstatus_1 = ntstatus_proc_create;
+  if ( !process_flags )
+  {
+    if ( ntstatus_proc_create == 297 )
+    {
+      RtlCriticalSectionLock = 1;
+      ReleaseState = 1;
+      LockState = 1;
+      qword_18016C0F0 = (__int64)NtCurrentTeb()->ClientId.UniqueThread;
+      dword_18016C0E8 = -2;
+      dword_18016C0EC = 1;
+      qword_18016C0F8 = 0;
+    }
+    else
+    {
+      LdrpForkInProgress = 0;
+      ReleaseState = 0;
+      RtlReleaseSRWLockExclusive(&LdrpForkActiveLock);
+    }
+    RtlReleaseSRWLockExclusive(&RtlCriticalSectionLock);
+    LdrForkMrdata(LockState);
+    if ( LockState == 1 )
+      RtlpProtectedPoliciesSRWLock = 1;
+    else
+      RtlReleaseSRWLockExclusive(&RtlpProtectedPoliciesSRWLock);
+    RtlUnlockHeapManagerForCloning(ReleaseState);
+    LdrpUnlockTlsDelayedReclaimTable(ReleaseState);
+    RtlLeaveCriticalSection(&FastPebLock);
+    RtlpFlsCloneComplete(v19, ReleaseState);
+    LdrpCompleteProcessCloning(ReleaseState);
+    if ( ReleaseState )
+    {
+      LdrpForkInProgress = 0;
+      RtlAcquireReleaseSRWLockExclusive(&LdrpForkActiveLock);
+      RtlWakeAllConditionVariable(&LdrpForkConditionVariable);
+    }
+  }
+  return ntstatus_1;
+}
